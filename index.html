@@ -1,0 +1,1077 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Porvoon sääennuste mobiili</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f6;
+      --panel: #ffffff;
+      --text: #172025;
+      --muted: #5b6870;
+      --line: #d9e2e3;
+      --accent: #087f8c;
+      --accent-dark: #065f68;
+      --clear: #fff1c7;
+      --cloud: #e8ecef;
+      --rain: #dbeaf6;
+      --mixed: #e3f0df;
+      --shadow: 0 12px 30px rgba(31, 46, 54, 0.11);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      background:
+        linear-gradient(180deg, rgba(244, 247, 246, 0.9), rgba(244, 247, 246, 1)),
+        url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=78");
+      background-attachment: fixed;
+      background-position: center;
+      background-size: cover;
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .page {
+      width: min(100% - 20px, 540px);
+      margin: 0 auto;
+      padding: 16px 0 26px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .top-panel,
+    .source-panel,
+    .day-card,
+    .notice,
+    .error,
+    .loading {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    .top-panel {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label,
+    .meta-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+      font-size: 16px;
+      padding: 9px 10px;
+    }
+
+    .meta-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .source-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 10px;
+    }
+
+    .source {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid rgba(217, 226, 227, 0.9);
+      border-radius: 8px;
+      background: #f8fbfb;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    .source strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pill {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      background: var(--muted);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 7px;
+    }
+
+    .pill.ok {
+      background: var(--accent);
+    }
+
+    .pill.fail {
+      background: #a63d40;
+    }
+
+    .notice {
+      display: none;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      background: #fff7db;
+      color: #5d4b08;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .forecast-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .day-card {
+      overflow: hidden;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      background: #f7fbfc;
+      border-bottom: 1px solid var(--line);
+      padding: 11px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .day-name {
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .day-date {
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .period-list {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .period-wrap {
+      display: grid;
+      gap: 6px;
+    }
+
+    .period-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .period-card {
+      display: grid;
+      gap: 8px;
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--mixed);
+    }
+
+    .period-card.clear {
+      background: var(--clear);
+    }
+
+    .period-card.cloudy {
+      background: var(--cloud);
+    }
+
+    .period-card.rain {
+      background: var(--rain);
+    }
+
+    .weather {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .weather-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(23, 32, 37, 0.14);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .weather-icon.sun {
+      color: #e5a800;
+    }
+
+    .weather-icon.cloud {
+      color: #68747c;
+    }
+
+    .weather-icon.rain {
+      color: #2f80b8;
+    }
+
+    .weather-icon.mixed {
+      color: #d79a00;
+      text-shadow: 1px 1px 0 #68747c;
+    }
+
+    .metrics {
+      display: grid;
+      gap: 6px;
+      color: #2d3a40;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-top: 1px solid rgba(23, 32, 37, 0.12);
+      padding-top: 6px;
+    }
+
+    .metric-row b {
+      font-weight: 800;
+    }
+
+    .temp-value,
+    .rain-value,
+    .wind-value {
+      min-width: 76px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-style: normal;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .temp-value.deep-blue {
+      background: #143a66;
+      color: #ffffff;
+    }
+
+    .temp-value.light-blue {
+      background: #d5ecff;
+      color: #14517f;
+    }
+
+    .temp-value.yellow {
+      background: #fff0b8;
+      color: #755b00;
+    }
+
+    .temp-value.orange {
+      background: #ffd7a3;
+      color: #804300;
+    }
+
+    .temp-value.light-red {
+      background: #ffd1d1;
+      color: #8f2525;
+    }
+
+    .temp-value.deep-red {
+      background: #a72222;
+      color: #ffffff;
+    }
+
+    .rain-value.green,
+    .wind-value.green {
+      background: #d9f0cf;
+      color: #226b2f;
+    }
+
+    .rain-value.yellow,
+    .wind-value.yellow {
+      background: #fff0b8;
+      color: #755b00;
+    }
+
+    .rain-value.red,
+    .wind-value.red {
+      background: #ffd3d3;
+      color: #9b2026;
+    }
+
+    .sources-used {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .loading,
+    .error {
+      padding: 24px 14px;
+      text-align: center;
+      line-height: 1.45;
+    }
+
+    .loading {
+      color: var(--muted);
+    }
+
+    .error {
+      color: #7e1f23;
+      background: #fff0f0;
+    }
+
+    footer {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    footer a {
+      color: var(--accent-dark);
+    }
+
+    @media (min-width: 560px) {
+      .period-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .source-panel {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>Porvoon sääennuste</h1>
+      <p class="lead">Mobiilinäkymä: 7 päivän ennuste neljään jaksoon, kolmen lähteen konsensuksena.</p>
+    </header>
+
+    <section class="top-panel" aria-label="Asetukset">
+      <div class="field">
+        <label for="locationSelect">Paikkakunta</label>
+        <select id="locationSelect"></select>
+      </div>
+      <div>
+        <span class="meta-label">Viimeisin päivitys</span>
+        <span class="meta-value" id="updatedAt">Haetaan ennustetta...</span>
+      </div>
+    </section>
+
+    <section class="source-panel" id="sourceStatus" aria-label="Sääpalveluiden tila"></section>
+    <p class="notice" id="notice"></p>
+    <section id="forecastRoot" class="loading" aria-label="Sääennuste">Haetaan kolmen lähteen ennusteita...</section>
+
+    <footer>
+      Lähteet:
+      <a href="https://opendata.fmi.fi/wfs" target="_blank" rel="noreferrer">FMI</a>,
+      <a href="https://api.met.no/weatherapi/locationforecast/2.0/" target="_blank" rel="noreferrer">Yr/MET Norway</a>,
+      <a href="https://open-meteo.com/en/docs" target="_blank" rel="noreferrer">Open-Meteo</a>.
+      Ennuste on laskennallinen konsensus eikä virallinen varoitustuote.
+    </footer>
+  </main>
+
+  <script>
+    const DEFAULT_LOCATION_ID = "fi-porvoo";
+    const LOCATIONS = [
+      {
+        group: "Suomen keskeiset kaupungit",
+        places: [
+          { id: "fi-porvoo", name: "Porvoo", country: "Suomi", lat: 60.3923, lon: 25.6651, altitude: 12 },
+          { id: "fi-helsinki", name: "Helsinki", country: "Suomi", lat: 60.1699, lon: 24.9384, altitude: 17 },
+          { id: "fi-espoo", name: "Espoo", country: "Suomi", lat: 60.2055, lon: 24.6559, altitude: 20 },
+          { id: "fi-vantaa", name: "Vantaa", country: "Suomi", lat: 60.2934, lon: 25.0378, altitude: 20 },
+          { id: "fi-tampere", name: "Tampere", country: "Suomi", lat: 61.4978, lon: 23.7610, altitude: 113 },
+          { id: "fi-turku", name: "Turku", country: "Suomi", lat: 60.4518, lon: 22.2666, altitude: 20 },
+          { id: "fi-oulu", name: "Oulu", country: "Suomi", lat: 65.0121, lon: 25.4651, altitude: 15 },
+          { id: "fi-jyvaskyla", name: "Jyväskylä", country: "Suomi", lat: 62.2426, lon: 25.7473, altitude: 100 },
+          { id: "fi-kuopio", name: "Kuopio", country: "Suomi", lat: 62.8924, lon: 27.6770, altitude: 102 },
+          { id: "fi-lahti", name: "Lahti", country: "Suomi", lat: 60.9827, lon: 25.6615, altitude: 104 },
+          { id: "fi-pori", name: "Pori", country: "Suomi", lat: 61.4851, lon: 21.7972, altitude: 17 },
+          { id: "fi-joensuu", name: "Joensuu", country: "Suomi", lat: 62.6010, lon: 29.7636, altitude: 80 },
+          { id: "fi-lappeenranta", name: "Lappeenranta", country: "Suomi", lat: 61.0587, lon: 28.1887, altitude: 106 },
+          { id: "fi-vaasa", name: "Vaasa", country: "Suomi", lat: 63.0960, lon: 21.6158, altitude: 10 },
+          { id: "fi-rovaniemi", name: "Rovaniemi", country: "Suomi", lat: 66.5039, lon: 25.7294, altitude: 85 },
+          { id: "fi-seinajoki", name: "Seinäjoki", country: "Suomi", lat: 62.7903, lon: 22.8403, altitude: 70 },
+          { id: "fi-hameenlinna", name: "Hämeenlinna", country: "Suomi", lat: 60.9959, lon: 24.4643, altitude: 90 },
+          { id: "fi-kouvola", name: "Kouvola", country: "Suomi", lat: 60.8667, lon: 26.7042, altitude: 80 },
+          { id: "fi-kotka", name: "Kotka", country: "Suomi", lat: 60.4664, lon: 26.9458, altitude: 10 },
+          { id: "fi-mikkeli", name: "Mikkeli", country: "Suomi", lat: 61.6886, lon: 27.2723, altitude: 95 }
+        ]
+      },
+      {
+        group: "Viron keskeiset kaupungit",
+        places: [
+          { id: "ee-tallinn", name: "Tallinna", country: "Viro", lat: 59.4370, lon: 24.7536, altitude: 15 },
+          { id: "ee-tartu", name: "Tartto", country: "Viro", lat: 58.3776, lon: 26.7290, altitude: 57 },
+          { id: "ee-narva", name: "Narva", country: "Viro", lat: 59.3797, lon: 28.1791, altitude: 25 },
+          { id: "ee-parnu", name: "Pärnu", country: "Viro", lat: 58.3859, lon: 24.4971, altitude: 10 },
+          { id: "ee-kohtla-jarve", name: "Kohtla-Järve", country: "Viro", lat: 59.3986, lon: 27.2731, altitude: 55 },
+          { id: "ee-viljandi", name: "Viljandi", country: "Viro", lat: 58.3639, lon: 25.5900, altitude: 83 },
+          { id: "ee-rakvere", name: "Rakvere", country: "Viro", lat: 59.3464, lon: 26.3558, altitude: 82 },
+          { id: "ee-maardu", name: "Maardu", country: "Viro", lat: 59.4767, lon: 25.0250, altitude: 35 },
+          { id: "ee-sillamae", name: "Sillamäe", country: "Viro", lat: 59.3997, lon: 27.7547, altitude: 20 },
+          { id: "ee-kuressaare", name: "Kuressaare", country: "Viro", lat: 58.2528, lon: 22.4869, altitude: 5 },
+          { id: "ee-voru", name: "Võru", country: "Viro", lat: 57.8425, lon: 27.0194, altitude: 75 },
+          { id: "ee-valga", name: "Valga", country: "Viro", lat: 57.7778, lon: 26.0473, altitude: 65 },
+          { id: "ee-haapsalu", name: "Haapsalu", country: "Viro", lat: 58.9431, lon: 23.5414, altitude: 5 },
+          { id: "ee-paide", name: "Paide", country: "Viro", lat: 58.8856, lon: 25.5572, altitude: 65 },
+          { id: "ee-johvi", name: "Jõhvi", country: "Viro", lat: 59.3592, lon: 27.4211, altitude: 55 }
+        ]
+      },
+      {
+        group: "Pienet paikkakunnat",
+        places: [
+          { id: "fi-somero", name: "Somero", country: "Suomi", lat: 60.6309, lon: 23.5116, altitude: 105 }
+        ]
+      }
+    ];
+
+    const ALL_LOCATIONS = LOCATIONS.flatMap((group) => group.places);
+    const FORECAST_DAYS = 7;
+    const TIME_ZONE = "Europe/Helsinki";
+    const PERIODS = [
+      { key: "yo", label: "Yö", range: "00-06" },
+      { key: "aamu", label: "Aamu", range: "06-12" },
+      { key: "paiva", label: "Päivä", range: "12-18" },
+      { key: "ilta", label: "Ilta", range: "18-24" }
+    ];
+    const SOURCE_DEFS = [
+      { key: "fmi", label: "FMI", shortLabel: "FMI" },
+      { key: "yr", label: "Yr", shortLabel: "Yr" },
+      { key: "openmeteo", label: "Open-Meteo", shortLabel: "Open-Meteo" }
+    ];
+    const sourceState = Object.fromEntries(SOURCE_DEFS.map((source) => [source.key, { label: source.shortLabel, ok: false, error: null }]));
+    let selectedLocation = ALL_LOCATIONS.find((location) => location.id === DEFAULT_LOCATION_ID) || ALL_LOCATIONS[0];
+    let loadSequence = 0;
+
+    const fmtDateTime = new Intl.DateTimeFormat("fi-FI", { dateStyle: "medium", timeStyle: "short", timeZone: TIME_ZONE });
+    const fmtWeekday = new Intl.DateTimeFormat("fi-FI", { weekday: "long", timeZone: TIME_ZONE });
+    const fmtDate = new Intl.DateTimeFormat("fi-FI", { day: "numeric", month: "numeric", timeZone: TIME_ZONE });
+
+    function helsinkiParts(date) {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        hour12: false
+      }).formatToParts(date);
+      const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return { date: `${value.year}-${value.month}-${value.day}`, hour: Number(value.hour === "24" ? "0" : value.hour) };
+    }
+
+    function addDays(ymd, days) {
+      const [year, month, day] = ymd.split("-").map(Number);
+      return new Date(Date.UTC(year, month - 1, day + days, 12)).toISOString().slice(0, 10);
+    }
+
+    function dateList() {
+      const today = helsinkiParts(new Date()).date;
+      return Array.from({ length: FORECAST_DAYS }, (_, index) => addDays(today, index));
+    }
+
+    function periodForHour(hour) {
+      if (hour < 6) return "yo";
+      if (hour < 12) return "aamu";
+      if (hour < 18) return "paiva";
+      return "ilta";
+    }
+
+    function currentSlot() {
+      const now = helsinkiParts(new Date());
+      return {
+        date: now.date,
+        hour: now.hour,
+        period: periodForHour(now.hour)
+      };
+    }
+
+    function shouldUseForecastHour(parts) {
+      const current = currentSlot();
+      if (parts.date !== current.date) return true;
+      if (periodForHour(parts.hour) !== current.period) return true;
+      return parts.hour >= current.hour;
+    }
+
+    function isCurrentOrNextPeriod(date, periodKey) {
+      const current = currentSlot();
+      const currentIndex = PERIODS.findIndex((period) => period.key === current.period);
+      const slotIndex = PERIODS.findIndex((period) => period.key === periodKey);
+      if (date === current.date && slotIndex === currentIndex) return true;
+      if (date === current.date && slotIndex === currentIndex + 1) return true;
+      if (currentIndex === PERIODS.length - 1 && slotIndex === 0 && date === addDays(current.date, 1)) return true;
+      return false;
+    }
+
+    function renderSourceStatuses() {
+      document.getElementById("sourceStatus").innerHTML = SOURCE_DEFS.map((source) => `
+        <div class="source"><strong>${source.label}</strong><span class="pill" id="status-${source.key}">Odottaa</span></div>
+      `).join("");
+    }
+
+    function renderLocationSelect() {
+      const select = document.getElementById("locationSelect");
+      select.innerHTML = LOCATIONS.map((group) => `
+        <optgroup label="${group.group}">
+          ${group.places.map((place) => `<option value="${place.id}">${place.name}, ${place.country}</option>`).join("")}
+        </optgroup>
+      `).join("");
+      select.value = selectedLocation.id;
+      select.addEventListener("change", () => {
+        selectedLocation = ALL_LOCATIONS.find((location) => location.id === select.value) || selectedLocation;
+        loadForecast();
+      });
+    }
+
+    function renderLocationHeading(location) {
+      const title = `${location.name} sääennuste mobiili`;
+      document.querySelector("h1").textContent = `${location.name} sääennuste`;
+      document.title = title;
+    }
+
+    function setSourceStatus(key, status, text) {
+      const pill = document.getElementById(`status-${key}`);
+      if (!pill) return;
+      pill.textContent = text;
+      pill.className = `pill ${status}`;
+    }
+
+    function markSource(key, ok, error = null) {
+      sourceState[key].ok = ok;
+      sourceState[key].error = error;
+      setSourceStatus(key, ok ? "ok" : "fail", ok ? "Ladattu" : "Virhe");
+    }
+
+    function round(value, digits = 0) {
+      if (!Number.isFinite(value)) return null;
+      const factor = 10 ** digits;
+      return Math.round(value * factor) / factor;
+    }
+
+    function average(values) {
+      const clean = values.filter(Number.isFinite);
+      if (!clean.length) return null;
+      return clean.reduce((sum, value) => sum + value, 0) / clean.length;
+    }
+
+    function maxFinite(values) {
+      const clean = values.filter(Number.isFinite);
+      if (!clean.length) return null;
+      return Math.max(...clean);
+    }
+
+    function sum(values) {
+      return values.filter(Number.isFinite).reduce((total, value) => total + value, 0);
+    }
+
+    function mode(values) {
+      const counts = new Map();
+      values.filter(Boolean).forEach((value) => counts.set(value, (counts.get(value) || 0) + 1));
+      return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "tuntematon";
+    }
+
+    function weatherFromWmo(code, rain, cloud) {
+      if (rain >= 2 || [61, 63, 65, 80, 81, 82, 95, 96, 99].includes(code)) return "sateinen";
+      if (rain >= 0.2 || (code >= 51 && code <= 57)) return "sadekuuroja";
+      if (code === 2) return "puolipilvinen";
+      if (code === 3 || code === 45 || code === 48 || cloud >= 95) return "pilvinen";
+      if (cloud >= 35) return "puolipilvinen";
+      return "selkeä";
+    }
+
+    function weatherFromYr(symbol, rain, cloud) {
+      if (rain >= 2 || /heavyrain|rain$/.test(symbol)) return "sateinen";
+      if (rain >= 0.2 || /rain|sleet|snow/.test(symbol)) return "sadekuuroja";
+      if (/partly/.test(symbol)) return "puolipilvinen";
+      if (/cloudy|fog/.test(symbol) || cloud >= 95) return "pilvinen";
+      if (cloud >= 35) return "puolipilvinen";
+      return "selkeä";
+    }
+
+    function weatherFromFmi(symbol, rain) {
+      if (rain >= 2) return "sateinen";
+      if (rain >= 0.2 || symbol >= 21) return "sadekuuroja";
+      if (symbol >= 3) return "pilvinen";
+      if (symbol === 2) return "puolipilvinen";
+      return "selkeä";
+    }
+
+    function cloudFromFmiSymbol(symbol) {
+      if (symbol <= 1) return 15;
+      if (symbol === 2) return 55;
+      return 90;
+    }
+
+    function weatherClass(weather) {
+      if (weather === "selkeä") return "clear";
+      if (weather === "pilvinen") return "cloudy";
+      if (weather === "sateinen" || weather === "sadekuuroja") return "rain";
+      return "mixed";
+    }
+
+    function weatherIcon(weather) {
+      if (weather === "selkeä") return { symbol: "☀", label: "Aurinkoista", className: "sun" };
+      if (weather === "puolipilvinen") return { symbol: "⛅", label: "Puolipilvistä", className: "mixed" };
+      if (weather === "pilvinen") return { symbol: "☁", label: "Pilvistä", className: "cloud" };
+      if (weather === "sateinen") return { symbol: "🌧", label: "Sateista", className: "rain" };
+      if (weather === "sadekuuroja") return { symbol: "🌦", label: "Sadekuuroja", className: "rain" };
+      return { symbol: "○", label: "Säätila ei tiedossa", className: "cloud" };
+    }
+
+    function rainClass(amount) {
+      if (!Number.isFinite(amount) || amount <= 0) return "green";
+      if (amount <= 4) return "yellow";
+      return "red";
+    }
+
+    function windClass(speed) {
+      if (!Number.isFinite(speed) || speed <= 5) return "green";
+      if (speed <= 10) return "yellow";
+      return "red";
+    }
+
+    function tempClass(minTemp, maxTemp) {
+      if (!Number.isFinite(minTemp) || !Number.isFinite(maxTemp)) return "yellow";
+      const averageTemp = (minTemp + maxTemp) / 2;
+      if (averageTemp <= -10) return "deep-blue";
+      if (averageTemp <= 0) return "light-blue";
+      if (averageTemp <= 10) return "yellow";
+      if (averageTemp <= 18) return "orange";
+      if (averageTemp <= 25) return "light-red";
+      return "deep-red";
+    }
+
+    function finalWeather(sourceSummaries, rain, cloud, context = {}) {
+      const categories = sourceSummaries.map((item) => item.weather);
+      const rainyCount = categories.filter((item) => item === "sateinen" || item === "sadekuuroja").length;
+      if (rain >= 2 || categories.includes("sateinen")) return "sateinen";
+      if (rain >= 0.3 || rainyCount >= 2) return "sadekuuroja";
+      const fmi = sourceSummaries.find((item) => item.source === "FMI");
+      if (
+        context.fmiCloudPriority &&
+        fmi &&
+        ["selkeä", "puolipilvinen", "pilvinen"].includes(fmi.weather)
+      ) {
+        return fmi.weather;
+      }
+      const likely = mode(categories);
+      if (categories.filter((item) => item === likely).length >= 2) return likely;
+      if (cloud >= 95) return "pilvinen";
+      if (cloud >= 35) return "puolipilvinen";
+      return "selkeä";
+    }
+
+    function emptyBucket(source, date, period) {
+      return { source, date, period, temps: [], rain: [], wind: [], gust: [], cloud: [], weather: [] };
+    }
+
+    function summarizeSourceBuckets(records) {
+      const grouped = new Map();
+      records.forEach((record) => {
+        const key = `${record.source}|${record.date}|${record.period}`;
+        if (!grouped.has(key)) grouped.set(key, emptyBucket(record.source, record.date, record.period));
+        const bucket = grouped.get(key);
+        bucket.temps.push(record.temp);
+        bucket.rain.push(record.rain);
+        bucket.wind.push(record.wind);
+        bucket.gust.push(record.gust);
+        bucket.cloud.push(record.cloud);
+        bucket.weather.push(record.weather);
+      });
+
+      return [...grouped.values()].map((bucket) => ({
+        source: bucket.source,
+        date: bucket.date,
+        period: bucket.period,
+        minTemp: Math.min(...bucket.temps.filter(Number.isFinite)),
+        maxTemp: Math.max(...bucket.temps.filter(Number.isFinite)),
+        rain: sum(bucket.rain),
+        wind: average(bucket.wind),
+        gust: maxFinite(bucket.gust),
+        cloud: average(bucket.cloud),
+        weather: mode(bucket.weather)
+      })).filter((item) => Number.isFinite(item.minTemp) && Number.isFinite(item.maxTemp));
+    }
+
+    function buildConsensus(records, dates) {
+      const summaries = summarizeSourceBuckets(records);
+      const output = new Map();
+      const bySlot = new Map();
+
+      summaries.forEach((summary) => {
+        const key = `${summary.date}|${summary.period}`;
+        if (!bySlot.has(key)) bySlot.set(key, []);
+        bySlot.get(key).push(summary);
+      });
+
+      dates.forEach((date) => {
+        output.set(date, {});
+        PERIODS.forEach((period) => {
+          const sourceSummaries = bySlot.get(`${date}|${period.key}`) || [];
+          if (!sourceSummaries.length) {
+            output.get(date)[period.key] = null;
+            return;
+          }
+
+          const rain = average(sourceSummaries.map((item) => item.rain)) || 0;
+          const cloud = average(sourceSummaries.map((item) => item.cloud)) || 0;
+          const minTemp = average(sourceSummaries.map((item) => item.minTemp));
+          const maxTemp = average(sourceSummaries.map((item) => item.maxTemp));
+          const wind = average(sourceSummaries.map((item) => item.wind));
+          const gust = average(sourceSummaries.map((item) => item.gust));
+
+          output.get(date)[period.key] = {
+            weather: finalWeather(sourceSummaries, rain, cloud, {
+              fmiCloudPriority: selectedLocation.country === "Suomi" && isCurrentOrNextPeriod(date, period.key)
+            }),
+            minTemp,
+            maxTemp,
+            rain,
+            wind,
+            gust,
+            sources: sourceSummaries.map((item) => item.source)
+          };
+        });
+      });
+
+      return output;
+    }
+
+    async function fetchOpenMeteoModel(dates, location, sourceName, endpoint) {
+      const params = new URLSearchParams({
+        latitude: location.lat,
+        longitude: location.lon,
+        hourly: "temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m",
+        timezone: TIME_ZONE,
+        forecast_days: FORECAST_DAYS
+      });
+      const response = await fetch(`https://api.open-meteo.com/v1/${endpoint}?${params}`);
+      if (!response.ok) throw new Error(`${sourceName} ${response.status}`);
+      const data = await response.json();
+      const wanted = new Set(dates);
+
+      return data.hourly.time.map((time, index) => {
+        const date = time.slice(0, 10);
+        const hour = Number(time.slice(11, 13));
+        const rain = Number(data.hourly.precipitation[index] || 0);
+        const cloud = Number(data.hourly.cloud_cover[index] || 0);
+        const code = Number(data.hourly.weather_code[index] || 0);
+        if (!wanted.has(date)) return null;
+        if (!shouldUseForecastHour({ date, hour })) return null;
+        return {
+          source: sourceName,
+          date,
+          period: periodForHour(hour),
+          temp: Number(data.hourly.temperature_2m[index]),
+          rain,
+          wind: Number(data.hourly.wind_speed_10m[index] || 0) / 3.6,
+          gust: Number(data.hourly.wind_gusts_10m[index] || NaN) / 3.6,
+          cloud,
+          weather: weatherFromWmo(code, rain, cloud)
+        };
+      }).filter(Boolean);
+    }
+
+    function fetchOpenMeteo(dates, location) {
+      return fetchOpenMeteoModel(dates, location, "Open-Meteo", "forecast");
+    }
+
+    async function fetchYr(dates, location) {
+      const url = `https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${location.lat}&lon=${location.lon}&altitude=${location.altitude}`;
+      const response = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error(`Yr ${response.status}`);
+      const data = await response.json();
+      const wanted = new Set(dates);
+
+      return data.properties.timeseries.map((item) => {
+        const parts = helsinkiParts(new Date(item.time));
+        if (!wanted.has(parts.date)) return null;
+        if (!shouldUseForecastHour(parts)) return null;
+        const details = item.data.instant.details;
+        let rain = 0;
+        let symbol = "";
+        if (item.data.next_1_hours) {
+          rain = Number(item.data.next_1_hours.details.precipitation_amount || 0);
+          symbol = item.data.next_1_hours.summary.symbol_code || "";
+        } else if (item.data.next_6_hours) {
+          rain = Number(item.data.next_6_hours.details.precipitation_amount || 0);
+          symbol = item.data.next_6_hours.summary.symbol_code || "";
+        } else if (item.data.next_12_hours) {
+          symbol = item.data.next_12_hours.summary.symbol_code || "";
+        }
+        const cloud = Number(details.cloud_area_fraction || 0);
+        return {
+          source: "Yr",
+          date: parts.date,
+          period: periodForHour(parts.hour),
+          temp: Number(details.air_temperature),
+          rain,
+          wind: Number(details.wind_speed || 0),
+          gust: Number(details.wind_speed_of_gust || NaN),
+          cloud,
+          weather: weatherFromYr(symbol, rain, cloud)
+        };
+      }).filter(Boolean);
+    }
+
+    async function fetchFmi(dates, location) {
+      const start = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+      const end = new Date(Date.now() + (FORECAST_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
+      const params = new URLSearchParams({
+        service: "WFS",
+        version: "2.0.0",
+        request: "getFeature",
+        storedquery_id: "fmi::forecast::edited::weather::scandinavia::point::multipointcoverage",
+        latlon: `${location.lat},${location.lon}`,
+        parameters: "Temperature,Precipitation1h,WeatherSymbol3,WindSpeedMS,WindGust",
+        starttime: start,
+        endtime: end,
+        timestep: "60"
+      });
+      const response = await fetch(`https://opendata.fmi.fi/wfs?${params}`);
+      if (!response.ok) throw new Error(`FMI ${response.status}`);
+      const xmlText = await response.text();
+      const xml = new DOMParser().parseFromString(xmlText, "text/xml");
+      const positionsNode = xml.querySelector("positions");
+      const valuesNode = xml.querySelector("doubleOrNilReasonTupleList");
+      if (!positionsNode || !valuesNode) throw new Error("FMI-vastaus puuttellinen");
+      const positions = positionsNode.textContent.trim().split(/\s+/);
+      const values = valuesNode.textContent.trim().split(/\s+/);
+      const wanted = new Set(dates);
+      const records = [];
+
+      for (let index = 0; index < positions.length / 3; index += 1) {
+        const unix = Number(positions[index * 3 + 2]);
+        const parts = helsinkiParts(new Date(unix * 1000));
+        if (!wanted.has(parts.date)) continue;
+        if (!shouldUseForecastHour(parts)) continue;
+        const valueIndex = index * 5;
+        const temp = Number(values[valueIndex]);
+        const rain = Number(values[valueIndex + 1] || 0);
+        const symbol = Number(values[valueIndex + 2] || 0);
+        const wind = Number(values[valueIndex + 3] || 0);
+        const gust = Number(values[valueIndex + 4]);
+        const cloud = cloudFromFmiSymbol(symbol);
+        records.push({
+          source: "FMI",
+          date: parts.date,
+          period: periodForHour(parts.hour),
+          temp,
+          rain,
+          wind,
+          gust,
+          cloud,
+          weather: weatherFromFmi(symbol, rain)
+        });
+      }
+
+      return records;
+    }
+
+    function formatNumber(value, digits = 0) {
+      if (!Number.isFinite(value)) return "-";
+      return round(value, digits).toLocaleString("fi-FI", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function prettyDate(ymd) {
+      const [year, month, day] = ymd.split("-").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day, 12));
+      return { day: fmtWeekday.format(date), date: fmtDate.format(date) };
+    }
+
+    function periodMarkup(slot, period) {
+      if (!slot) {
+        return `
+          <article class="period-wrap">
+            <div class="period-label">${period.label} ${period.range}</div>
+            <div class="period-card mixed">
+              <div class="weather"><span class="weather-icon cloud" aria-label="Säätila ei tiedossa">○</span><span>Ei dataa</span></div>
+              <div class="metrics">
+                <span class="metric-row"><b>Lämpö</b><em class="temp-value yellow">-</em></span>
+                <span class="metric-row"><b>Sade</b><em class="rain-value green">-</em></span>
+                <span class="metric-row"><b>Keskituuli</b><em class="wind-value green">-</em></span>
+                <span class="metric-row"><b>Puuskat</b><em>-</em></span>
+              </div>
+              <div class="sources-used">Lähteet puuttuvat</div>
+            </div>
+          </article>
+        `;
+      }
+
+      const icon = weatherIcon(slot.weather);
+      const minTemp = formatNumber(slot.minTemp);
+      const maxTemp = formatNumber(slot.maxTemp);
+      const tempColor = tempClass(slot.minTemp, slot.maxTemp);
+      const rain = formatNumber(slot.rain, slot.rain > 0 && slot.rain < 1 ? 1 : 0);
+      const rainColor = rainClass(slot.rain);
+      const wind = formatNumber(slot.wind, 1);
+      const windColor = windClass(slot.wind);
+      const gust = formatNumber(slot.gust, 1);
+      const sources = slot.sources.join(", ");
+      return `
+        <article class="period-wrap">
+          <div class="period-label">${period.label} ${period.range}</div>
+          <div class="period-card ${weatherClass(slot.weather)}">
+            <div class="weather"><span class="weather-icon ${icon.className}" aria-label="${icon.label}">${icon.symbol}</span><span>${slot.weather}</span></div>
+            <div class="metrics">
+              <span class="metric-row"><b>Lämpö</b><em class="temp-value ${tempColor}">${minTemp}-${maxTemp} &deg;C</em></span>
+              <span class="metric-row"><b>Sade</b><em class="rain-value ${rainColor}">${rain} mm</em></span>
+              <span class="metric-row"><b>Keskituuli</b><em class="wind-value ${windColor}">${wind} m/s</em></span>
+              <span class="metric-row"><b>Puuskat</b><em>${gust} m/s</em></span>
+            </div>
+            <div class="sources-used">${sources}</div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderForecast(consensus, dates) {
+      document.getElementById("forecastRoot").className = "forecast-list";
+      document.getElementById("forecastRoot").innerHTML = dates.map((date) => {
+        const label = prettyDate(date);
+        const slots = consensus.get(date);
+        return `
+          <section class="day-card">
+            <header class="day-header">
+              <span class="day-name">${label.day}</span>
+              <span class="day-date">${label.date}</span>
+            </header>
+            <div class="period-list">
+              ${PERIODS.map((period) => periodMarkup(slots[period.key], period)).join("")}
+            </div>
+          </section>
+        `;
+      }).join("");
+    }
+
+    function renderNotice() {
+      const failed = Object.values(sourceState).filter((source) => !source.ok);
+      const notice = document.getElementById("notice");
+      if (!failed.length) {
+        notice.style.display = "none";
+        notice.textContent = "";
+        return;
+      }
+      notice.style.display = "block";
+      notice.textContent = `Osa lähteistä ei vastannut: ${failed.map((source) => source.label).join(", ")}. Ennuste on laskettu onnistuneista lähteistä.`;
+    }
+
+    async function loadForecast() {
+      const sequence = loadSequence + 1;
+      loadSequence = sequence;
+      const location = selectedLocation;
+      renderLocationHeading(location);
+      document.getElementById("updatedAt").textContent = "Haetaan ennustetta...";
+      Object.keys(sourceState).forEach((key) => setSourceStatus(key, "", "Odottaa"));
+      document.getElementById("forecastRoot").className = "loading";
+      document.getElementById("forecastRoot").textContent = `Haetaan kolmen lähteen ennustetta: ${location.name}, ${location.country}...`;
+
+      const dates = dateList();
+      const requests = [
+        { key: "fmi", run: () => fetchFmi(dates, location) },
+        { key: "yr", run: () => fetchYr(dates, location) },
+        { key: "openmeteo", run: () => fetchOpenMeteo(dates, location) }
+      ];
+      const results = await Promise.allSettled(requests.map((request) => request.run()));
+      if (sequence !== loadSequence) return;
+      const records = [];
+      results.forEach((result, index) => {
+        const key = requests[index].key;
+        if (result.status === "fulfilled") {
+          markSource(key, true);
+          records.push(...result.value);
+        } else {
+          markSource(key, false, result.reason);
+          console.warn(`${key} failed`, result.reason);
+        }
+      });
+      renderNotice();
+      document.getElementById("updatedAt").textContent = fmtDateTime.format(new Date());
+      if (!records.length) {
+        document.getElementById("forecastRoot").className = "error";
+        document.getElementById("forecastRoot").textContent = "Ennustetta ei voitu hakea yhdestäkään sääpalvelusta. Tarkista internet-yhteys ja yritä avata sivu uudelleen.";
+        return;
+      }
+      renderForecast(buildConsensus(records, dates), dates);
+    }
+
+    renderSourceStatuses();
+    renderLocationSelect();
+    loadForecast();
+  </script>
+</body>
+</html>
