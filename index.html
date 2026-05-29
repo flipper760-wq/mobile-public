@@ -312,7 +312,7 @@
     .temp-value,
     .rain-value,
     .wind-value {
-      min-width: 76px;
+      min-width: 128px;
       border-radius: 999px;
       padding: 2px 8px;
       font-style: normal;
@@ -628,6 +628,19 @@
       return clean.reduce((sum, value) => sum + value, 0) / clean.length;
     }
 
+    function averageDirection(values) {
+      const clean = values.filter(Number.isFinite);
+      if (!clean.length) return null;
+      const vector = clean.reduce((acc, value) => {
+        const radians = value * Math.PI / 180;
+        acc.x += Math.sin(radians);
+        acc.y += Math.cos(radians);
+        return acc;
+      }, { x: 0, y: 0 });
+      if (Math.abs(vector.x) < 0.001 && Math.abs(vector.y) < 0.001) return null;
+      return (Math.atan2(vector.x, vector.y) * 180 / Math.PI + 360) % 360;
+    }
+
     function maxFinite(values) {
       const clean = values.filter(Number.isFinite);
       if (!clean.length) return null;
@@ -704,6 +717,12 @@
       return "red";
     }
 
+    function windDirectionLabel(degrees) {
+      if (!Number.isFinite(degrees)) return "";
+      const labels = ["pohjoisesta", "koillisesta", "idästä", "kaakosta", "etelästä", "lounaasta", "lännestä", "luoteesta"];
+      return labels[Math.round(degrees / 45) % labels.length];
+    }
+
     function tempClass(minTemp, maxTemp) {
       if (!Number.isFinite(minTemp) || !Number.isFinite(maxTemp)) return "yellow";
       const averageTemp = (minTemp + maxTemp) / 2;
@@ -736,7 +755,7 @@
     }
 
     function emptyBucket(source, date, period) {
-      return { source, date, period, temps: [], rain: [], wind: [], gust: [], cloud: [], weather: [] };
+      return { source, date, period, temps: [], rain: [], wind: [], windDirection: [], gust: [], cloud: [], weather: [] };
     }
 
     function summarizeSourceBuckets(records) {
@@ -748,6 +767,7 @@
         bucket.temps.push(record.temp);
         bucket.rain.push(record.rain);
         bucket.wind.push(record.wind);
+        bucket.windDirection.push(record.windDirection);
         bucket.gust.push(record.gust);
         bucket.cloud.push(record.cloud);
         bucket.weather.push(record.weather);
@@ -761,6 +781,7 @@
         maxTemp: Math.max(...bucket.temps.filter(Number.isFinite)),
         rain: sum(bucket.rain),
         wind: average(bucket.wind),
+        windDirection: averageDirection(bucket.windDirection),
         gust: maxFinite(bucket.gust),
         cloud: average(bucket.cloud),
         weather: mode(bucket.weather)
@@ -792,6 +813,7 @@
           const minTemp = average(sourceSummaries.map((item) => item.minTemp));
           const maxTemp = average(sourceSummaries.map((item) => item.maxTemp));
           const wind = average(sourceSummaries.map((item) => item.wind));
+          const windDirection = averageDirection(sourceSummaries.map((item) => item.windDirection));
           const gust = average(sourceSummaries.map((item) => item.gust));
 
           output.get(date)[period.key] = {
@@ -802,6 +824,7 @@
             maxTemp,
             rain,
             wind,
+            windDirection,
             gust,
             sources: sourceSummaries.map((item) => item.source)
           };
@@ -815,7 +838,7 @@
       const params = new URLSearchParams({
         latitude: location.lat,
         longitude: location.lon,
-        hourly: "temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m",
+        hourly: "temperature_2m,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_gusts_10m,wind_direction_10m",
         timezone: TIME_ZONE,
         forecast_days: FORECAST_DAYS
       });
@@ -839,6 +862,7 @@
           temp: Number(data.hourly.temperature_2m[index]),
           rain,
           wind: Number(data.hourly.wind_speed_10m[index] || 0) / 3.6,
+          windDirection: Number(data.hourly.wind_direction_10m[index]),
           gust: Number(data.hourly.wind_gusts_10m[index] || NaN) / 3.6,
           cloud,
           weather: weatherFromWmo(code, rain, cloud)
@@ -881,6 +905,7 @@
           temp: Number(details.air_temperature),
           rain,
           wind: Number(details.wind_speed || 0),
+          windDirection: Number(details.wind_from_direction),
           gust: Number(details.wind_speed_of_gust || NaN),
           cloud,
           weather: weatherFromYr(symbol, rain, cloud)
@@ -897,7 +922,7 @@
         request: "getFeature",
         storedquery_id: "fmi::forecast::edited::weather::scandinavia::point::multipointcoverage",
         latlon: `${location.lat},${location.lon}`,
-        parameters: "Temperature,Precipitation1h,WeatherSymbol3,WindSpeedMS,WindGust",
+        parameters: "Temperature,Precipitation1h,WeatherSymbol3,WindSpeedMS,WindGust,WindDirection",
         starttime: start,
         endtime: end,
         timestep: "60"
@@ -919,12 +944,14 @@
         const parts = helsinkiParts(new Date(unix * 1000));
         if (!wanted.has(parts.date)) continue;
         if (!shouldUseForecastHour(parts)) continue;
-        const valueIndex = index * 5;
+        const valueStride = Math.max(5, Math.round(values.length / (positions.length / 3)));
+        const valueIndex = index * valueStride;
         const temp = Number(values[valueIndex]);
         const rain = Number(values[valueIndex + 1] || 0);
         const symbol = Number(values[valueIndex + 2] || 0);
         const wind = Number(values[valueIndex + 3] || 0);
         const gust = Number(values[valueIndex + 4]);
+        const windDirection = Number(values[valueIndex + 5]);
         const cloud = cloudFromFmiSymbol(symbol);
         records.push({
           source: "FMI",
@@ -933,6 +960,7 @@
           temp,
           rain,
           wind,
+          windDirection,
           gust,
           cloud,
           weather: weatherFromFmi(symbol, rain)
@@ -979,6 +1007,8 @@
       const rain = formatNumber(slot.rain, slot.rain > 0 && slot.rain < 1 ? 1 : 0);
       const rainColor = rainClass(slot.rain);
       const wind = formatNumber(slot.wind, 1);
+      const windDirection = windDirectionLabel(slot.windDirection);
+      const windText = windDirection ? `${wind} m/s ${windDirection}` : `${wind} m/s`;
       const windColor = windClass(slot.wind);
       const gust = formatNumber(slot.gust, 1);
       const sources = slot.sources.join(", ");
@@ -990,7 +1020,7 @@
             <div class="metrics">
               <span class="metric-row"><b>Lämpö</b><em class="temp-value ${tempColor}">${minTemp}-${maxTemp} &deg;C</em></span>
               <span class="metric-row"><b>Sade</b><em class="rain-value ${rainColor}">${rain} mm</em></span>
-              <span class="metric-row"><b>Keskituuli</b><em class="wind-value ${windColor}">${wind} m/s</em></span>
+              <span class="metric-row"><b>Keskituuli</b><em class="wind-value ${windColor}">${windText}</em></span>
               <span class="metric-row"><b>Puuskat</b><em>${gust} m/s</em></span>
             </div>
             <div class="sources-used">${sources}</div>
